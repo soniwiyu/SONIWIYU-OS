@@ -1,0 +1,67 @@
+name: SONIWIYU Kernel Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout SONIWIYU
+        uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install Clang 21
+        run: |
+          wget -qO llvm.sh https://apt.llvm.org/llvm.sh
+          sudo bash llvm.sh 21
+          sudo apt-get install -y clang-21 lld-21 llvm-21
+
+      - name: Download kernel source
+        run: |
+          COMMIT="$(cat kernel/kernel-commit.txt)"
+          mkdir kernel-src
+          cd kernel-src
+          git init
+          git remote add origin https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+          git fetch --depth=1 origin "$COMMIT"
+          git checkout --detach FETCH_HEAD
+
+      - name: Apply SONIWIYU patch and config
+        run: |
+          cd kernel-src
+          git apply ../kernel/soniwiyu-kernel.patch
+          mkdir -p out
+          cp ../kernel/land_defconfig out/.config
+
+      - name: Configure kernel
+        run: |
+          make -C kernel-src O=out ARCH=arm64 LLVM=-21 olddefconfig
+
+      - name: Build kernel
+        run: |
+          make -C kernel-src O=out ARCH=arm64 LLVM=-21 -j2
+
+      - name: Upload kernel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SONIWIYU-Kernel-7.3.5
+          path: |
+            kernel-src/out/arch/arm64/boot/Image*
+            kernel-src/out/System.map
+            kernel-src/out/Module.symvers
+            kernel-src/out/.config
+          if-no-files-found: error
+          retention-days: 14

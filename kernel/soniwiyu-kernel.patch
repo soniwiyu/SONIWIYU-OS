@@ -1,0 +1,139 @@
+diff --git a/scripts/Makefile b/scripts/Makefile
+index 3434a82a1..041a05270 100644
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -33,7 +33,7 @@ HOSTCFLAGS_tracepoint-update.o = -I$(srctree)/tools/include
+ HOSTCFLAGS_elf-parse.o = -I$(srctree)/tools/include
+ HOSTCFLAGS_sorttable.o = -I$(srctree)/tools/include
+ HOSTLDLIBS_sorttable = -lpthread
+-HOSTCFLAGS_asn1_compiler.o = -I$(srctree)/include
++
+ HOSTCFLAGS_sign-file.o = $(shell $(HOSTPKG_CONFIG) --cflags libcrypto 2> /dev/null)
+ HOSTCFLAGS_sign-file.o += -I$(srctree)/tools/include/uapi/
+ HOSTLDLIBS_sign-file = $(shell $(HOSTPKG_CONFIG) --libs libcrypto 2> /dev/null || echo -lcrypto)
+diff --git a/scripts/asn1_compiler.c b/scripts/asn1_compiler.c
+index 4c3f64506..a25878365 100644
+--- a/scripts/asn1_compiler.c
++++ b/scripts/asn1_compiler.c
+@@ -15,7 +15,7 @@
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
+-#include <linux/asn1_ber_bytecode.h>
++#include "../include/linux/asn1.h"
+ 
+ enum token_type {
+ 	DIRECTIVE_ABSENT,
+diff --git a/scripts/mod/modpost.c b/scripts/mod/modpost.c
+index 75374c64b..5dbab2edc 100644
+--- a/scripts/mod/modpost.c
++++ b/scripts/mod/modpost.c
+@@ -21,6 +21,44 @@
+ #include <stdbool.h>
+ #include <errno.h>
+ 
++/* ARM ELF relocation constants for the host modpost build. */
++#ifndef R_ARM_ABS32
++#define R_ARM_ABS32 0x02
++#endif
++#ifndef R_ARM_REL32
++#define R_ARM_REL32 0x03
++#endif
++#ifndef R_ARM_PC24
++#define R_ARM_PC24 0x01
++#endif
++#ifndef R_ARM_CALL
++#define R_ARM_CALL 0x1c
++#endif
++#ifndef R_ARM_JUMP24
++#define R_ARM_JUMP24 0x1d
++#endif
++#ifndef R_ARM_MOVW_ABS_NC
++#define R_ARM_MOVW_ABS_NC 0x2b
++#endif
++#ifndef R_ARM_MOVT_ABS
++#define R_ARM_MOVT_ABS 0x2c
++#endif
++#ifndef R_ARM_THM_MOVW_ABS_NC
++#define R_ARM_THM_MOVW_ABS_NC 0x2f
++#endif
++#ifndef R_ARM_THM_MOVT_ABS
++#define R_ARM_THM_MOVT_ABS 0x30
++#endif
++#ifndef R_ARM_THM_JUMP19
++#define R_ARM_THM_JUMP19 0x33
++#endif
++#ifndef R_ARM_THM_PC22
++#define R_ARM_THM_PC22 0x0b
++#endif
++#ifndef R_ARM_THM_JUMP24
++#define R_ARM_THM_JUMP24 0x1e
++#endif
++
+ #include <hash.h>
+ #include <hashtable.h>
+ #include <list.h>
+diff --git a/scripts/mod/modpost.h b/scripts/mod/modpost.h
+index d5f6d8283..7cd8ec821 100644
+--- a/scripts/mod/modpost.h
++++ b/scripts/mod/modpost.h
+@@ -29,8 +29,8 @@
+ #define Elf_Sym     Elf32_Sym
+ #define Elf_Addr    Elf32_Addr
+ #define Elf_Section Elf32_Half
+-#define ELF_ST_BIND ELF32_ST_BIND
+-#define ELF_ST_TYPE ELF32_ST_TYPE
++#define ELF_ST_BIND(x) (((x) >> 4) & 0xf)
++#define ELF_ST_TYPE(x) ((x) & 0xf)
+ 
+ #define Elf_Rel     Elf32_Rel
+ #define Elf_Rela    Elf32_Rela
+@@ -43,8 +43,8 @@
+ #define Elf_Sym     Elf64_Sym
+ #define Elf_Addr    Elf64_Addr
+ #define Elf_Section Elf64_Half
+-#define ELF_ST_BIND ELF64_ST_BIND
+-#define ELF_ST_TYPE ELF64_ST_TYPE
++#define ELF_ST_BIND(x) (((x) >> 4) & 0xf)
++#define ELF_ST_TYPE(x) ((x) & 0xf)
+ 
+ #define Elf_Rel     Elf64_Rel
+ #define Elf_Rela    Elf64_Rela
+diff --git a/scripts/selinux/mdp/Makefile b/scripts/selinux/mdp/Makefile
+index 673782e32..dfb4f79c2 100644
+--- a/scripts/selinux/mdp/Makefile
++++ b/scripts/selinux/mdp/Makefile
+@@ -1,7 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ hostprogs-always-y += mdp
+ HOST_EXTRACFLAGS += \
+-	-I$(srctree)/include \
+ 	-I$(srctree)/security/selinux/include -I$(objtree)/include
+ 
+ clean-files	:= policy.* file_contexts
+diff --git a/scripts/selinux/mdp/mdp.c b/scripts/selinux/mdp/mdp.c
+index ea7fbe595..282b526f9 100644
+--- a/scripts/selinux/mdp/mdp.c
++++ b/scripts/selinux/mdp/mdp.c
+@@ -15,7 +15,7 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <string.h>
+-#include <linux/kconfig.h>
++#include <generated/autoconf.h>
+ 
+ static void usage(char *name)
+ {
+diff --git a/usr/gen_init_cpio.c b/usr/gen_init_cpio.c
+index b7296edc6..bd049190c 100644
+--- a/usr/gen_init_cpio.c
++++ b/usr/gen_init_cpio.c
+@@ -457,7 +457,7 @@ static int cpio_mkfile(const char *name, const char *location,
+ 			goto error;
+ 
+ 		if (size) {
+-			this_read = copy_file_range(file, NULL, outfd, NULL, size, 0);
++			this_read = 0;
+ 			if (this_read > 0) {
+ 				if (this_read > size)
+ 					goto error;
