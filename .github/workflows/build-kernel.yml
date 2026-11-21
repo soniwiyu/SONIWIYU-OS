@@ -60,6 +60,7 @@ jobs:
           name: SONIWIYU-Kernel-7.3.5
           path: |
             kernel-src/out/arch/arm64/boot/Image*
+            kernel-src/out/arch/arm64/boot/dts/qcom/msm8937-xiaomi-land.dtb
             kernel-src/out/System.map
             kernel-src/out/Module.symvers
             kernel-src/out/.config
