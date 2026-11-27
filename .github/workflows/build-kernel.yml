@@ -61,6 +61,7 @@ jobs:
           path: |
             kernel-src/out/arch/arm64/boot/Image*
             kernel-src/out/arch/arm64/boot/dts/qcom/msm8937-xiaomi-land.dtb
+            kernel-src/out/arch/arm64/boot/dts/qcom/msm8917-xiaomi-rolex.dtb
             kernel-src/out/System.map
             kernel-src/out/Module.symvers
             kernel-src/out/.config
