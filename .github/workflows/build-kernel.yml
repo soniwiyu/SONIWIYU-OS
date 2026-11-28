@@ -54,6 +54,10 @@ jobs:
         run: |
           make -C kernel-src O=out ARCH=arm64 LLVM=-21 -j2
 
+      - name: Install kernel modules
+        run: |
+          make -C kernel-src O=out ARCH=arm64 LLVM=-21 INSTALL_MOD_PATH=out/modules_install modules_install
+
       - name: Export kernel config
         run: cp kernel-src/out/.config kernel-src/out/kernel.config
 
@@ -68,5 +72,6 @@ jobs:
             kernel-src/out/System.map
             kernel-src/out/Module.symvers
             kernel-src/out/kernel.config
+            kernel-src/out/modules_install/
           if-no-files-found: error
           retention-days: 14
