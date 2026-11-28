@@ -56,7 +56,7 @@ jobs:
 
       - name: Install kernel modules
         run: |
-          make -C kernel-src O=out ARCH=arm64 LLVM=-21 INSTALL_MOD_PATH=out/modules_install modules_install
+          make -C kernel-src O=out ARCH=arm64 LLVM=-21 INSTALL_MOD_PATH=modules_install modules_install
 
       - name: Export kernel config
         run: cp kernel-src/out/.config kernel-src/out/kernel.config
